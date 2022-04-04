@@ -2,27 +2,33 @@
 # It should be run from within the current working directory
 
 # ----- IMPORTS ----- #
-import shutil
-
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 from PyPDF4 import PdfFileWriter, PdfFileReader
 import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog as fd
+from tkinter.messagebox import showinfo
 import os
 from sys import platform
+import pandas as pd
 
+
+# Make sure that necessary directories exist
 try:
     os.mkdir('Intermediate_Files')
 except FileExistsError:
-    print("There was a FileExistsError")
+    print("ERROR: There was a FileExistsError.")
 else:
     pass
 
 
-date_font = "Times-Roman"
+# ----- VARIABLES ----- #
+width, height = A4
 name_font = "Times-Bold"
+name_font_size = 25
+date_font = "Times-Roman"
+date_font_size = 14
 available_fonts = [
     'Courier',
     'Courier-Bold',
@@ -40,28 +46,25 @@ available_fonts = [
     'ZapfDingbats'
 ]
 available_font_sizes = [n for n in range(10, 100)]
-
-date_font_size = 14
-name_font_size = 25
-start_date = "May 13, 1999"
-end_date = "April 3, 2022"
-names_path = "No File Selected"
-diploma_path = "No File Selected"
-width, height = A4
-translate_name = {
+start_date = "May 13, 1999"  # Stores beginning date of training
+end_date = "April 3, 2022"  # Stores end date of training
+names_path = "No File Selected"  # Stores full path to local list of names .txt file
+diploma_path = "No File Selected"  # Stores full path to local diploma pdf file
+translate_name = {  # Stores the amount to offset the name from default position in pixels
     'x': 0,
     'y': 0
 }
-translate_date = {
+translate_date = {  # Stores the amount to offset the date from default position in pixels
     'x': 0,
     'y': 0
 }
-files_to_merge = []
-names = []
+files_to_merge = []  # Intermediate list to store individual diplomas before combining at the end
+names = []  # Stores list of names from file
 
 
-# Function used to create separate pdf with only a name on it
+# ----- PDF METHODS ----- #
 def create_name_pdf(c_, name):
+    """Takes blank pdf canvas and a name and returns a pdf with only the name on it"""
     # print(c_.getAvailableFonts())
     c_.translate(height / 2 + translate_name['x'], width * 0.70 + translate_name['y'])
     # c_.setFillColorRGB(255, 255, 255)
@@ -75,8 +78,8 @@ def create_name_pdf(c_, name):
     c_.drawCentredString(0, 0, f"{start_date} - {end_date}")
 
 
-# Merge to create each unique diploma
-def write_name_on_diploma(temp, output, name_pdf):
+def write_name_on_diploma(temp, name_pdf, output):
+    """Takes diploma template and name pdf, returns a merged version to output"""
     name_obj = PdfFileReader(name_pdf)
     name_page = name_obj.getPage(0)
 
@@ -92,8 +95,8 @@ def write_name_on_diploma(temp, output, name_pdf):
         pdf_writer.write(out)
 
 
-# Combine all into a final file
 def merge_diplomas(paths, output):
+    """Takes a list of single page pdf paths, returns a combined version to output"""
     pdf_writer = PdfFileWriter()
 
     for path in paths:
@@ -105,9 +108,21 @@ def merge_diplomas(paths, output):
 
 
 def generate_diplomas():
+    """Uses all of the above methods to generate a single, multi-page, diploma document"""
+
+    # Make sure that files have been selected
+    if names_path == "No File Selected" or diploma_path == "No File Selected":
+        showinfo(
+            title='No File Selected',
+            message='To generate the diplomas, you need to select a diploma template file (PDF) and a file containing '
+                    'a list of names (.txt or .xlsx). One or both of these is missing.'
+        )
+        return
+
+    # Update all variables, these probably should all be global but I was in a rush lol
     global selected_name_font, selected_date_font,  selected_name_size, selected_date_size, start_date_input, \
-        end_date_input
-    global name_font, date_font, start_date, end_date, name_font_size, date_font_size
+        end_date_input, name_font, date_font, start_date, end_date, name_font_size, date_font_size, \
+        translate_name, translate_date, translate_name_input, translate_date_input
     name_font = selected_name_font.get()
     date_font = selected_date_font.get()
     start_date = start_date_input.get() if start_date_input.get() != '' else 'January 00, 0000'
@@ -115,14 +130,57 @@ def generate_diplomas():
     name_font_size = int(selected_name_size.get())
     date_font_size = int(selected_date_size.get())
 
-    global translate_name, translate_date, translate_name_input, translate_date_input
     if translate_name_input.get() != "":
-        translate_name['x'] = int(translate_name_input.get().split(',')[0].strip())
-        translate_name['y'] = int(translate_name_input.get().split(',')[1].strip())
+        try:
+            translate_name['x'] = int(translate_name_input.get().split(',')[0].strip())
+            translate_name['y'] = int(translate_name_input.get().split(',')[1].strip())
+        except ValueError:
+            showinfo(
+                title='Value Error',
+                message='One of the values you entered in the "Change Name Position" field is incorrect. '
+                        'Make sure to input 2 integers separated by a comma. '
+                        'For example, to shift left 30 pixels and up 60 pixels, you should enter: -30, 60'
+            )
+            return
+        except IndexError:
+            showinfo(
+                title='Value Error',
+                message='One of the values you entered in the "Change Name Position" field is incorrect. '
+                        'Make sure to input 2 integers separated by a comma. '
+                        'For example, to shift left 30 pixels and up 60 pixels, you should enter: -30, 60'
+            )
+            return
     if translate_date_input.get() != "":
-        translate_date['x'] = int(translate_date_input.get().split(',')[0].strip())
-        translate_date['y'] = int(translate_date_input.get().split(',')[1].strip())
+        try:
+            translate_date['x'] = int(translate_date_input.get().split(',')[0].strip())
+            translate_date['y'] = int(translate_date_input.get().split(',')[1].strip())
+        except ValueError:
+            showinfo(
+                title='Value Error',
+                message='One of the values you entered in the "Change Date Position" field is incorrect. '
+                        'Make sure to input 2 integers separated by a comma. '
+                        'For example, to shift left 30 pixels and up 60 pixels, you should enter: -30, 60'
+            )
+            return
+        except IndexError:
+            showinfo(
+                title='Value Error',
+                message='One of the values you entered in the "Change Name Position" field is incorrect. '
+                        'Make sure to input 2 integers separated by a comma. '
+                        'For example, to shift left 30 pixels and up 60 pixels, you should enter: -30, 60'
+            )
+            return
 
+    # If list of names is empty, return and show error
+    if not names:
+        showinfo(
+            title='Names File Empty',
+            message='It looks like the list of names you selected is empty. '
+                    'Try selecting another file or adding names to the .txt/.xlxs file you selected.'
+        )
+        return
+
+    # Otherwise, create name pdf files
     for curr_name in names:
         c = canvas.Canvas(f"Intermediate_Files/{curr_name}.pdf", pagesize=A4)
         files_to_merge.append(f"Intermediate_Files/output-{curr_name}.pdf")
@@ -130,9 +188,9 @@ def generate_diplomas():
         c.showPage()
         c.save()
 
+    # Write the names on the diplomas
     for each in names:
-        write_name_on_diploma(diploma_path, f"Intermediate_Files/output-{each}.pdf",
-                              f"Intermediate_Files/{each}.pdf")
+        write_name_on_diploma(diploma_path, f"Intermediate_Files/{each}.pdf", f"Intermediate_Files/output-{each}.pdf")
 
     # Export final file to desktop
     if platform == "linux" or platform == "darwin":
@@ -140,11 +198,20 @@ def generate_diplomas():
     if platform == "win32":
         merge_diplomas(files_to_merge, os.path.join(os.path.join(os.environ['USERPROFILE']), 'Desktop/final_output.pdf'))
 
+    showinfo(
+        title='Finished Operation',
+        message='The file has been created and is located on your desktop. '
+                'Rename/move the file before generating again or the previous version will be overwritten.'
+    )
 
+
+# ----- GUI METHODS ----- #
 def select_names_file():
+    """Used to select the names.txt file in the GUI"""
     filetypes = (
         ('text files', '*.txt'),
-        ('All files', '*.*'),
+        ('excel files', '*.xlsx'),
+        ('excel files', '*.xls'),
     )
 
     filename = fd.askopenfile(
@@ -152,18 +219,26 @@ def select_names_file():
         initialdir='.',
         filetypes=filetypes)
 
-    global names_path
-    names_path = filename.name
-    names_file_label["text"] = names_path
-    names_file_label["foreground"] = "blue"
+    if filename:
+        global names_path
+        names_path = filename.name
+        names_file_label["text"] = names_path
+        names_file_label["foreground"] = "blue"
 
-    global names
-    with open(names_path, "r") as f:
-        names = f.readlines()
-        names = [name.strip() for name in names]
+        global names
+        if names_path[len(names_path) - 4:] == ".txt":
+            with open(names_path, "r") as f:
+                names = f.readlines()
+                names = [name.strip() for name in names]
+        if names_path[len(names_path) - 4:] == ".xls" or names_path[len(names_path) - 4:] == "xlsx":
+            df = pd.read_excel(rf"{names_path}", header=None)
+            df = df.to_dict()[0]
+            names = list(df.values())
+            names = [n.strip() for n in names]
 
 
 def select_diploma_file():
+    """Used to select the diploma.pdf file in the GUI"""
     filetypes = (
         ('pdf files', '*.pdf'),
     )
@@ -173,14 +248,16 @@ def select_diploma_file():
         initialdir='.',
         filetypes=filetypes)
 
-    global diploma_path
-    diploma_path = filename.name
-    print(diploma_path)
-    diploma_file_label["text"] = diploma_path
-    diploma_file_label["foreground"] = "blue"
+    if filename:
+        global diploma_path
+        diploma_path = filename.name
+        diploma_file_label["text"] = diploma_path
+        diploma_file_label["foreground"] = "blue"
+    # if filename not in names:
+    #     return True
 
 
-# ----- UI SETUP ----- #
+# ----- GUI SETUP ----- #
 base_col_width = 15
 
 window = tk.Tk()
@@ -194,6 +271,7 @@ select_names_file_prompt.grid(column=0, row=0, sticky='e')
 names_file_label = ttk.Label(
     text=names_path,
 )
+names_file_label.config(foreground='red')
 names_file_label.grid(column=1, row=0, pady=10)
 select_names_file_btn = ttk.Button(
     text="Choose name file",
@@ -207,6 +285,7 @@ select_diploma_file_prompt.grid(column=0, row=1, sticky='e')
 diploma_file_label = ttk.Label(
     text=diploma_path
 )
+diploma_file_label.config(foreground='red')
 diploma_file_label.grid(column=1, row=1, pady=10)
 select_diploma_file_btn = ttk.Button(
     text="Choose diploma file",
@@ -273,9 +352,3 @@ warning_label.grid(column=0, row=11, columnspan=3)
 
 
 window.mainloop()
-
-
-# Drop down for name/date font/size
-# Input for positioning text within the document
-# Possible input for changing document size
-
