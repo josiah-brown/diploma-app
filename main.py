@@ -266,7 +266,7 @@ window.resizable(True, True)
 window.config(padx=100, pady=50)
 
 
-select_names_file_prompt = tk.Label(text="Choose Names File (.txt only):")
+select_names_file_prompt = tk.Label(text="Choose Names File (.txt or .xlsx only):")
 select_names_file_prompt.grid(column=0, row=0, sticky='e')
 names_file_label = ttk.Label(
     text=names_path,
@@ -336,11 +336,15 @@ translate_name_label = tk.Label(text='Change Name Position:')
 translate_name_label.grid(column=0, row=8, pady=10, sticky='e')
 translate_name_input = tk.Entry(window)
 translate_name_input.grid(column=1, row=8)
+translate_name_note = tk.Label(text='Leave empty for default position.')
+translate_name_note.grid(column=2, row=8, pady=10, sticky='e')
 
 translate_date_label = tk.Label(text='Change Date Position:')
 translate_date_label.grid(column=0, row=9, pady=10, sticky='e')
 translate_date_input = tk.Entry(window)
 translate_date_input.grid(column=1, row=9)
+translate_date_note = tk.Label(text='Leave empty for default position.')
+translate_date_note.grid(column=2, row=9, pady=10, sticky='e')
 
 generate_btn = ttk.Button(
     text="Generate Diplomas",
